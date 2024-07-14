@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parking Lot Availability</title>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const motorcycleSpots = document.getElementById("motorcycleSpots");
+            const carSpots = document.getElementById("carSpots");
+            const busSpots = document.getElementById("busSpots");
+
+            const ws = new WebSocket("ws://localhost:8080/ws");
+
+            ws.onmessage = (event) => {
+                const availableSpots = JSON.parse(event.data);
+                motorcycleSpots.textContent = availableSpots.motorcycle;
+                carSpots.textContent = availableSpots.car;
+                busSpots.textContent = availableSpots.bus;
+            };
+
+            ws.onclose = () => {
+                console.log("WebSocket connection closed");
+            };
+
+            ws.onerror = (error) => {
+                console.error("WebSocket error:", error);
+            };
+        });
+    </script>
+</head>
+<body>
+    <h1>Parking Lot Availability</h1>
+    <div>
+        <p>Motorcycle Spots: <span id="motorcycleSpots">0</span></p>
+        <p>Car Spots: <span id="carSpots">0</span></p>
+        <p>Bus Spots: <span id="busSpots">0</span></p>
+    </div>
+</body>
+</html>

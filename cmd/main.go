@@ -1,7 +1,8 @@
 package main
 
 import (
-	//"main/parking-lot-service/routes"
+	"flag"
+	"main/client"
 	"main/handlers"
 	"main/models"
 	"main/routes"
@@ -11,24 +12,35 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	_ "github.com/lib/pq"
+	"golang.org/x/net/websocket"
 )
 
-var db *gorm.DB
-
+var Db *gorm.DB
 var server *handlers.Server
 
 func initDB() *gorm.DB {
-	db, err := gorm.Open("postgres", "host=localhost port=5432 user=youruser dbname=yourdb password=yourpassword")
+	// Update the connection string as per your database configuration
+	Db, err := gorm.Open("postgres", "host=localhost port=5432 user=postgres dbname=parkingservice password=admin sslmode=disable")
+
 	if err != nil {
 		panic("failed to connect database")
 	}
-	db.AutoMigrate(&models.ParkingLot{}, &models.Tariff{}, &models.Ticket{})
-	return db
+	Db.AutoMigrate(&models.ParkingLot{}, &models.Tariff{}, &models.Ticket{})
+	return Db
 }
 
 func main() {
-	db = initDB()
-	defer db.Close()
+	runClient := flag.Bool("client", false, "Run the WebSocket client")
+	flag.Parse()
+
+	if *runClient {
+		client.RunWebSocketClient()
+		return
+	}
+
+	Db = initDB()
+	defer Db.Close()
 
 	e := echo.New()
 	e.Use(middleware.Logger())
@@ -36,10 +48,14 @@ func main() {
 
 	server = &handlers.Server{
 		ParkingLots: make(map[string]*models.ParkingLot),
-		//Clients:     make(map[*websocket.Conn]bool),
-		Mutex: &sync.Mutex{},
+		Clients:     make(map[*websocket.Conn]bool),
+		Mutex:       &sync.Mutex{},
 	}
+
+	// Serve static files
+	e.Static("/", "static")
+
 	routes.InitRoutes(e, server)
 
-	e.Logger.Fatal(e.Start(":8080"))
+	e.Logger.Fatal(e.Start(":8181"))
 }

@@ -24,13 +24,16 @@ type Tariff struct {
 	VehicleType  string
 	RatePerHour  float64
 	MaxDailyRate float64
+	ParkingLot   ParkingLot `gorm:"foreignkey:ParkingLotID"`
 }
 
 type Ticket struct {
 	gorm.Model
-	VehicleType  string
-	LicensePlate string
-	ParkingLotID uint
-	SpotNumber   uint
-	EntryTime    time.Time
+	VehicleType   string
+	VehicleNumber string
+	ParkingLotID  uint
+	SpotNumber    uint
+	EntryTime     time.Time
+	ExitTime      *time.Time
+	ParkingLot    ParkingLot `gorm:"foreignkey:ParkingLotID"`
 }
