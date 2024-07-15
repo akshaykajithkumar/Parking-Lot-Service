@@ -8,7 +8,10 @@ require (
 	golang.org/x/net v0.27.0
 )
 
-require github.com/lib/pq v1.1.1
+require (
+	github.com/gorilla/websocket v1.5.3
+	github.com/lib/pq v1.1.1 // indirect
+)
 
 require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect

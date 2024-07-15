@@ -8,7 +8,7 @@ import (
 )
 
 func RunWebSocketClient() {
-	ws, err := websocket.Dial("ws://localhost:8080/ws", "", "http://localhost/")
+	ws, err := websocket.Dial("ws://localhost:8181/ws", "", "http://localhost/")
 	if err != nil {
 		log.Fatal(err)
 	}
