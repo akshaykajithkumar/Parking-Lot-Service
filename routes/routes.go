@@ -29,12 +29,6 @@ func InitRoutes(e *echo.Echo, server *handlers.Server) {
 	e.POST("/parking-lots/:id/unpark", handlers.UnparkVehicle)
 	e.GET("/parking-lots/:id/available-spots", handlers.GetAvailableSpots)
 	e.GET("/ws", handlers.HandleWebSocket)
-	// e.POST("/api/v1/parkinglot", handlers.CreateParkingLot)
-	// e.GET("/api/v1/parkinglot/:id", handlers.GetParkingLotDetails)
-	// e.GET("/api/v1/parkinglots", handlers.ListParkingLots)
-	// e.POST("/api/v1/parkinglot/:id/park", handlers.ParkVehicle)
-	// e.POST("/api/v1/parkinglot/:id/unpark", handlers.UnparkVehicle)
-	// e.GET("/api/v1/parkinglot/:id/availablespots", handlers.GetAvailableSpots)
 
 	// Swagger route
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
