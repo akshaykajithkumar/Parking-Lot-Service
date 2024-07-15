@@ -1,0 +1,328 @@
+basePath: /api/v1
+definitions:
+  models.AvailableSpotsResponse:
+    properties:
+      bus:
+        type: integer
+      car:
+        type: integer
+      motorcycle:
+        type: integer
+    type: object
+  models.ErrorResponse:
+    properties:
+      error: {}
+      message:
+        type: string
+    type: object
+  models.ParkingLotSummary:
+    properties:
+      ID:
+        type: integer
+      name:
+        type: string
+    type: object
+  models.Receipt:
+    properties:
+      ID:
+        type: integer
+      entry_time:
+        type: string
+      exit_time:
+        type: string
+      parking_lot_id:
+        type: integer
+      vehicle_number:
+        type: string
+      vehicle_type:
+        type: string
+    type: object
+  models.SwaggerParkingLot:
+    properties:
+      bus_spots:
+        example: 20
+        type: integer
+      car_spots:
+        example: 200
+        type: integer
+      id:
+        example: 1
+        type: integer
+      motorcycle_spots:
+        example: 50
+        type: integer
+      name:
+        example: Parking lot A
+        type: string
+      occupied_buses:
+        example: 5
+        type: integer
+      occupied_cars:
+        example: 150
+        type: integer
+      occupied_motorcycles:
+        example: 10
+        type: integer
+      tariffs:
+        items:
+          $ref: '#/definitions/models.SwaggerTariff'
+        type: array
+    type: object
+  models.SwaggerRatePlan:
+    properties:
+      after_rate:
+        example: 5
+        type: number
+      first_hours:
+        example: 2
+        type: integer
+      first_rate:
+        example: 10
+        type: number
+      id:
+        example: 1
+        type: integer
+      tariff_id:
+        example: 1
+        type: integer
+    type: object
+  models.SwaggerTariff:
+    properties:
+      id:
+        example: 1
+        type: integer
+      parking_lot_id:
+        example: 1
+        type: integer
+      rate_plans:
+        items:
+          $ref: '#/definitions/models.SwaggerRatePlan'
+        type: array
+      vehicle_type:
+        example: car
+        type: string
+    type: object
+  models.SwaggerTicket:
+    properties:
+      ID:
+        type: integer
+      entry_time:
+        type: string
+      parking_lot_name:
+        type: string
+      vehicle_number:
+        type: string
+      vehicle_type:
+        type: string
+    type: object
+  models.UnparkResponse:
+    properties:
+      Total Fee:
+        type: integer
+      receipt:
+        $ref: '#/definitions/models.Receipt'
+    type: object
+  models.UnparkVehicleData:
+    properties:
+      vehicle_number:
+        type: string
+    type: object
+  models.VehicleData:
+    properties:
+      vehicle_number:
+        type: string
+      vehicle_type:
+        type: string
+    type: object
+host: localhost:8181
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is a parking lot management API.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Parking Lot API
+  version: "1.0"
+paths:
+  /parking-lots:
+    get:
+      description: Get a list of all parking lots
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.ParkingLotSummary'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: List all parking lots
+      tags:
+      - parkinglots
+    post:
+      consumes:
+      - application/json
+      description: 'Create a new parking lot [first_rate is the rate of first hours(eg
+        : 1st day = 24 hours ) and after_rate is the rate of after hours]'
+      parameters:
+      - description: Parking Lot
+        in: body
+        name: parkinglot
+        required: true
+        schema:
+          $ref: '#/definitions/models.SwaggerParkingLot'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.SwaggerParkingLot'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Create Parking Lot
+      tags:
+      - parkinglots
+  /parking-lots/{id}:
+    get:
+      description: Get detailed information about a specific parking lot
+      parameters:
+      - description: Parking Lot ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SwaggerParkingLot'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get details of a parking lot
+      tags:
+      - parkinglots
+  /parking-lots/{id}/available-spots:
+    get:
+      description: Get available spots in a specific parking lot
+      parameters:
+      - description: Parking Lot ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AvailableSpotsResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get available spots
+      tags:
+      - parkinglots
+  /parking-lots/{id}/park:
+    post:
+      consumes:
+      - application/json
+      description: Park a vehicle in a specific parking lot
+      parameters:
+      - description: Parking Lot ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Vehicle Data
+        in: body
+        name: vehicle
+        required: true
+        schema:
+          $ref: '#/definitions/models.VehicleData'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SwaggerTicket'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Park a vehicle
+      tags:
+      - parkinglots
+  /parking-lots/{id}/unpark:
+    post:
+      consumes:
+      - application/json
+      description: Unpark a vehicle from a specific parking lot
+      parameters:
+      - description: Parking Lot ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Vehicle Data
+        in: body
+        name: vehicle
+        required: true
+        schema:
+          $ref: '#/definitions/models.UnparkVehicleData'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UnparkResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Unpark a vehicle
+      tags:
+      - parkinglots
+swagger: "2.0"

@@ -32,11 +32,20 @@ type Server struct {
 	DB          *gorm.DB
 }
 
+// @Summary Create Parking Lot
+// @Description Create a new parking lot [first_rate is the rate of first hours(eg : 1st day = 24 hours ) and after_rate is the rate of after hours]
+// @Tags parkinglots system
+// @Accept json
+// @Produce json
+// @Param parkinglot body models.SwaggerParkingLot true "Parking Lot"
+// @Success 201 {object} models.SwaggerParkingLot
+// @Failure 400 {object} models.ErrorResponse
+// @Router /parking-lots [post]
 func CreateParkingLot(c echo.Context) error {
 	var parkingLot models.ParkingLot
 	if err := c.Bind(&parkingLot); err != nil {
 		c.Logger().Error("Failed to bind request data: ", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: err.Error(), Error: nil})
 	}
 
 	parkingLot.ID = 0
@@ -56,17 +65,26 @@ func CreateParkingLot(c echo.Context) error {
 		return nil
 	}); err != nil {
 		c.Logger().Error("Failed to create parking lot: ", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Error creating parking lot", "error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error creating parking lot", Error: err.Error()})
 	}
 
-	return c.JSON(http.StatusOK, map[string]string{"message": "successfully created"})
+	return c.JSON(http.StatusOK, models.ErrorResponse{Message: "successfully created"})
 }
 
+// GetParkingLotDetails godoc
+// @Summary Get details of a parking lot
+// @Description Get detailed information about a specific parking lot
+// @Tags parkinglots system
+// @Produce json
+// @Param id path int true "Parking Lot ID"
+// @Success 200 {object} models.SwaggerParkingLot
+// @Failure 404 {object} models.ErrorResponse
+// @Router /parking-lots/{id} [get]
 func GetParkingLotDetails(c echo.Context) error {
 	id := c.Param("id")
 	var parkingLot models.ParkingLot
 	if err := Db.Preload("Tariffs").Preload("Tariffs.RatePlans").First(&parkingLot, id).Error; err != nil {
-		return c.JSON(http.StatusNotFound, map[string]string{"message": "Parking lot not found"})
+		return c.JSON(http.StatusNotFound, models.ErrorResponse{Message: "Error getting parking lots", Error: err.Error()})
 	}
 
 	simplifiedLot := map[string]interface{}{
@@ -104,10 +122,19 @@ func GetParkingLotDetails(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, simplifiedLot)
 }
+
+// ListParkingLots godoc
+// @Summary List all parking lots
+// @Description Get a list of all parking lots
+// @Tags parkinglots system
+// @Produce json
+// @Success 200 {array} models.ParkingLotSummary
+// @Failure 500 {object} models.ErrorResponse
+// @Router /parking-lots [get]
 func ListParkingLots(c echo.Context) error {
 	var parkingLots []models.ParkingLot
 	if err := Db.Find(&parkingLots).Error; err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Error listing parking lots"})
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error listing parking lots", Error: err.Error()})
 	}
 
 	var simplifiedParkingLots []map[string]interface{}
@@ -124,12 +151,26 @@ func ListParkingLots(c echo.Context) error {
 	return c.JSON(http.StatusOK, simplifiedParkingLots)
 }
 
+// ParkVehicle godoc
+// @Summary Park a vehicle
+// @Description Park a vehicle in a specific parking lot
+// @Tags parkinglots system
+// @Accept json
+// @Produce json
+// @Param id path int true "Parking Lot ID"
+// @Param vehicle body models.VehicleData true "Vehicle Data"
+// @Success 200 {object} models.SwaggerTicket
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 409 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /parking-lots/{id}/park [post]
 func ParkVehicle(c echo.Context) error {
 	id := c.Param("id")
 
 	var parkingLot models.ParkingLot
 	if err := Db.First(&parkingLot, id).Error; err != nil {
-		return c.JSON(http.StatusNotFound, map[string]string{"message": "Parking lot not found"})
+		return c.JSON(http.StatusNotFound, models.ErrorResponse{Message: "Parking lot not found", Error: err.Error()})
 	}
 
 	var vehicleData struct {
@@ -138,12 +179,12 @@ func ParkVehicle(c echo.Context) error {
 	}
 	if err := c.Bind(&vehicleData); err != nil {
 		c.Logger().Error("Error binding request body: ", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{"message": "Invalid request body"})
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid request body", Error: err.Error()})
 	}
 
 	// Validating form values
 	if vehicleData.VehicleType == "" || vehicleData.VehicleNumber == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"message": "Vehicle type and number are required"})
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Vehicle type and number are required"})
 	}
 
 	entryTime := time.Now()
@@ -161,30 +202,30 @@ func ParkVehicle(c echo.Context) error {
 		if parkingLot.OccupiedMotorcycles < parkingLot.MotorcycleSpots {
 			parkingLot.OccupiedMotorcycles++
 		} else {
-			return c.JSON(http.StatusConflict, map[string]string{"message": "No available motorcycle spots"})
+			return c.JSON(http.StatusConflict, models.ErrorResponse{Message: "No available motorcycle spots"})
 		}
 	case "car":
 		if parkingLot.OccupiedCars < parkingLot.CarSpots {
 			parkingLot.OccupiedCars++
 		} else {
-			return c.JSON(http.StatusConflict, map[string]string{"message": "No available car spots"})
+			return c.JSON(http.StatusConflict, models.ErrorResponse{Message: "No available car spots"})
 		}
 	case "bus":
 		if parkingLot.OccupiedBuses < parkingLot.BusSpots {
 			parkingLot.OccupiedBuses++
 		} else {
-			return c.JSON(http.StatusConflict, map[string]string{"message": "No available bus spots"})
+			return c.JSON(http.StatusConflict, models.ErrorResponse{Message: "No available bus spots"})
 		}
 	default:
-		return c.JSON(http.StatusBadRequest, map[string]string{"message": "Invalid vehicle type"})
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid vehicle type"})
 	}
 
 	if err := Db.Save(&parkingLot).Error; err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Error updating parking lot"})
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error updating parking lot"})
 	}
 
 	if err := Db.Create(&ticket).Error; err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Error creating ticket"})
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error creating ticket"})
 	}
 
 	response := map[string]interface{}{
@@ -206,31 +247,45 @@ func ParkVehicle(c echo.Context) error {
 	return c.JSON(http.StatusOK, response)
 }
 
+// UnparkVehicle godoc
+// @Summary Unpark a vehicle
+// @Description Unpark a vehicle from a specific parking lot
+// @Tags parkinglots system
+// @Accept json
+// @Produce json
+// @Param id path int true "Parking Lot ID"
+// @Param vehicle body models.UnparkVehicleData true "Vehicle Data"
+// @Success 200 {object} models.UnparkResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 409 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /parking-lots/{id}/unpark [post]
 func UnparkVehicle(c echo.Context) error {
 	id := c.Param("id")
 
 	// Finding the parking lot by ID
 	var parkingLot models.ParkingLot
 	if err := Db.Preload("Tariffs.RatePlans").First(&parkingLot, id).Error; err != nil {
-		return c.JSON(http.StatusNotFound, map[string]string{"message": "Parking lot not found"})
+		return c.JSON(http.StatusNotFound, models.ErrorResponse{Message: "Parking lot not found"})
 	}
 
 	var req struct {
 		VehicleNumber string `json:"vehicle_number"`
 	}
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"message": "Invalid request body"})
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid request body"})
 	}
 
 	// Checking if vehicle number is provided
 	if req.VehicleNumber == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"message": "Vehicle number is required"})
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Vehicle number is required"})
 	}
 
 	// Here finding the active ticket for the specified vehicle in the parking lot
 	var ticket models.Ticket
 	if err := Db.Where("parking_lot_id = ? AND vehicle_number = ? AND exit_time IS NULL", parkingLot.ID, req.VehicleNumber).First(&ticket).Error; err != nil {
-		return c.JSON(http.StatusNotFound, map[string]string{"message": "Active ticket not found"})
+		return c.JSON(http.StatusNotFound, models.ErrorResponse{Message: "Active ticket not found"})
 	}
 
 	// Recording the exit time for the ticket
@@ -245,7 +300,7 @@ func UnparkVehicle(c echo.Context) error {
 	fee := calculateFee(duration, parkingLot.Tariffs, ticket.VehicleType)
 
 	if err := Db.Save(&ticket).Error; err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Error updating ticket"})
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error updating ticket"})
 	}
 
 	// Decreaseing the occupied count based on vehicle type
@@ -254,26 +309,26 @@ func UnparkVehicle(c echo.Context) error {
 		if parkingLot.OccupiedMotorcycles > 0 {
 			parkingLot.OccupiedMotorcycles--
 		} else {
-			return c.JSON(http.StatusConflict, map[string]string{"message": "No motorcycles to unpark"})
+			return c.JSON(http.StatusConflict, models.ErrorResponse{Message: "No motorcycles to unpark"})
 		}
 	case "car":
 		if parkingLot.OccupiedCars > 0 {
 			parkingLot.OccupiedCars--
 		} else {
-			return c.JSON(http.StatusConflict, map[string]string{"message": "No cars to unpark"})
+			return c.JSON(http.StatusConflict, models.ErrorResponse{Message: "No cars to unpark"})
 		}
 	case "bus":
 		if parkingLot.OccupiedBuses > 0 {
 			parkingLot.OccupiedBuses--
 		} else {
-			return c.JSON(http.StatusConflict, map[string]string{"message": "No buses to unpark"})
+			return c.JSON(http.StatusConflict, models.ErrorResponse{Message: "No buses to unpark"})
 		}
 	default:
-		return c.JSON(http.StatusBadRequest, map[string]string{"message": "Invalid vehicle type"})
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid vehicle type"})
 	}
 
 	if err := Db.Save(&parkingLot).Error; err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Error updating parking lot"})
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error updating parking lot"})
 	}
 
 	availableSpots := map[string]int{
@@ -335,11 +390,20 @@ func calculateFee(duration float64, tariffs []models.Tariff, vehicleType string)
 	return totalFee
 }
 
+// GetAvailableSpots godoc
+// @Summary Get available spots
+// @Description Get available spots in a specific parking lot
+// @Tags parkinglots system
+// @Produce json
+// @Param id path int true "Parking Lot ID"
+// @Success 200 {object} models.AvailableSpotsResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Router /parking-lots/{id}/available-spots [get]
 func GetAvailableSpots(c echo.Context) error {
 	id := c.Param("id")
 	var parkingLot models.ParkingLot
 	if err := Db.First(&parkingLot, id).Error; err != nil {
-		return c.JSON(http.StatusNotFound, map[string]string{"message": "Parking lot not found"})
+		return c.JSON(http.StatusNotFound, models.ErrorResponse{Message: "Parking lot not found"})
 	}
 
 	availableSpots := map[string]int{
